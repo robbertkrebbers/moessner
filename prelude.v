@@ -1,4 +1,4 @@
-(* Copyright (c) 2012-2013, Louis Parlant and Robbert Krebbers. *)
+(* Copyright (c) 2013, Louis Parlant and Robbert Krebbers. *)
 (* This file is distributed under the terms of the BSD license. *)
 Require Export Utf8.
 Require Export Arith Omega Setoid Morphisms List NPeano.
