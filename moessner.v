@@ -1,6 +1,6 @@
 (* Copyright (c) 2012-2013, Louis Parlant and Robbert Krebbers. *)
 (* This file is distributed under the terms of the BSD license. *)
-Require Import Factorial prelude.
+Require Import prelude.
 
 Reserved Notation "Σ@{ i , k , n } s"
   (at level 20, i at level 1, k at level 1, n at level 1,
