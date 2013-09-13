@@ -26,8 +26,7 @@ Proof. now split; apply Rn_eq. Qed.
 Lemma Rn_mult_all_l n a b : Rn a b → Rn (#n ⊙ a) (#n ⊙ b).
 Proof.
   induction n as [|n IH]; [rewrite !Smult_0_l; constructor |].
-  rewrite Sall_S, !Smult_plus_distr_r, !Smult_1_l.
-  repeat constructor; auto.
+  rewrite repeat_S, !Smult_plus_distr_r, !Smult_1_l. repeat constructor; auto.
 Qed.
 
 (** Proposition 5.1 *)
@@ -76,7 +75,7 @@ Qed.
 Lemma nats_nats_pow_head n : head (nats ⊙ (nats ⊕ #1) ^^ n) = 2 ^ n.
 Proof.
   rewrite !zip_with_head, Spow_head,
-    zip_with_head, Sfrom_head, Sall_head; simpl; ring.
+    zip_with_head, Sfrom_head, repeat_head; simpl; ring.
 Qed.
 
 Fixpoint bin (i j : nat) : nat :=
@@ -89,8 +88,7 @@ Lemma bin_0 i : bin i 0 = 1.
 Proof. now destruct i. Qed.
 Lemma bin_overflow i j : i < j → bin i j = 0.
 Proof.
-  revert j; induction i as [|i IH];
-    intros [|j] ?; simpl; rewrite ?IH; omega.
+  revert j; induction i as [|i IH]; intros [|j] ?; simpl; rewrite ?IH; omega.
 Qed.
 Lemma bin_diag i : bin i i = 1.
 Proof.
@@ -141,24 +139,24 @@ Proof.
   induction j as [|j IH]; intros Hjn.
   { rewrite !bins_seq_S, !bins_seq_0, Nat.sub_succ, Nat.sub_0_r.
     rewrite bins_SS, (bins_pred (S n) n) by omega.
-    rewrite !Nat.pred_succ, Spow_1, !(Sall_zip_with plus), (Sall_S 1).
+    rewrite !Nat.pred_succ, Spow_1, !(repeat_zip_with plus), (repeat_S 1).
     rewrite <-Nat.sub_1_r. ring. }
   rewrite bins_seq_S, Nat.sub_succ_l, IH, Spow_S, bins_S by omega.
-  rewrite <-Nat.sub_succ_l, Nat.sub_succ, (Sall_zip_with plus) by omega.
-  rewrite bins_seq_S, !(Sall_S 1). ring.
+  rewrite <-Nat.sub_succ_l, Nat.sub_succ, (repeat_zip_with plus) by omega.
+  rewrite bins_seq_S, !(repeat_S 1). ring.
 Qed.
 Lemma bins_seq_SS n : bins_seq (S n) (S n) ≡ (nats ⊕ #2) ⊙ bins_seq n n.
 Proof.
   destruct n as [|n].
   { rewrite bins_seq_S, !bins_seq_0. unfold bins; simpl.
-    rewrite Spow_1, (Sall_S 1). ring. }
+    rewrite Spow_1, (repeat_S 1). ring. }
   rewrite bins_seq_S, bins_seq_SS_help, bins_seq_S by omega.
-  rewrite !Nat.sub_diag, !bins_0, Spow_S, !(Sall_S 1). ring.
+  rewrite !Nat.sub_diag, !bins_0, Spow_S, !(repeat_S 1). ring.
 Qed.
 Lemma nats_nats_pow_tail n : (nats ⊙ (nats ⊕ #1) ^^ n)` ≡ bins_seq n n.
 Proof.
-  rewrite zip_with_tail, Spow_tail, zip_with_tail, Snats_tail, Sall_tail.
-  rewrite Splus_assoc, <-Sall_zip_with; simpl. induction n as [|n IH].
+  rewrite zip_with_tail, Spow_tail, zip_with_tail, Snats_tail, repeat_tail.
+  rewrite Splus_assoc, <-repeat_zip_with; simpl. induction n as [|n IH].
   { rewrite Spow_0, bins_seq_0. unfold bins; simpl. ring. }
   rewrite Spow_S, <-(Smult_assoc (nats ⊕ #1)), (Smult_comm (nats ⊕ #1)).
   now rewrite (Smult_assoc (nats ⊕ #2)), IH, bins_seq_SS.
@@ -196,13 +194,13 @@ Proof.
   intros Hk. induction j as [|j IH]; intros Hjn.
   { rewrite bins_sig_seq_S, !bins_sig_seq_0; simpl.
     rewrite Nat.sub_0_r, <-Nat.sub_succ_l, Nat.sub_succ by easy.
-    rewrite bins_SS, (Sall_zip_with plus), Smult_plus_distr_r.
+    rewrite bins_SS, (repeat_zip_with plus), Smult_plus_distr_r.
     rewrite Ssigma_mult, Ssigma_plus, (Smult_plus_distr_l (#bins n n)).
     rewrite bins_pred, !Nat.pred_succ, <-Nat.sub_1_r by omega.
-    rewrite (Sall_zip_with plus). ring. }
+    rewrite (repeat_zip_with plus). ring. }
   rewrite bins_sig_seq_S, Nat.sub_succ_l, IH, bins_S by omega; simpl.
   rewrite <-!Nat.sub_succ_l, !Nat.sub_succ, Nat.sub_0_r by omega.
-  rewrite (Sall_zip_with plus).
+  rewrite (repeat_zip_with plus).
   rewrite !bins_sig_seq_S, Ssigma_plus, Ssigma_mult; simpl.
   rewrite <-!Nat.sub_succ_l, !Nat.sub_succ, Nat.sub_0_r by omega. ring.
 Qed.
@@ -213,7 +211,7 @@ Proof.
   intros Hk. destruct n as [|n].
   { rewrite bins_sig_seq_S, !bins_sig_seq_0. unfold bins, pow; simpl.
     rewrite <-Nat.sub_succ_l, Nat.sub_succ by easy.
-    rewrite !(Sall_S 1). rewrite Ssigma_mult, Ssigma_plus. ring. }
+    rewrite !(repeat_S 1). rewrite Ssigma_mult, Ssigma_plus. ring. }
   rewrite bins_sig_seq_S, bins_sig_seq_SS_help by omega.
   rewrite !bins_sig_seq_S; simpl. rewrite !Nat.sub_diag, !bins_0.
   rewrite <-!Nat.sub_succ_l, !Nat.sub_succ, Nat.sub_0_r by omega.
@@ -222,18 +220,18 @@ Qed.
 Lemma Ssigmas_0_tail n k : 2 ≤ k → (Σ@{0,k,n} #1)` ≡ bins_sig_seq n k n.
 Proof.
   intros Hk. destruct n as [|n]; simpl.
-  { rewrite bins_sig_seq_0, Ssigma_tail_0, !Sall_tail, Sall_head.
+  { rewrite bins_sig_seq_0, Ssigma_tail_0, !repeat_tail, repeat_head.
     unfold bins; simpl. ring. }
   rewrite Ssigma_tail_0, Ssigmas_S_tail, sigseq_0_head.
   revert k Hk. induction n as [|n IH]; intros k Hk; simpl.
   { rewrite bins_sig_seq_S, bins_sig_seq_0.
-    rewrite zip_with_tail, Ssigma_tail_0, !Sall_tail, Sall_head.
-    unfold bins, pow; simpl. rewrite !Ssigma_plus, (Sall_S 1).
+    rewrite zip_with_tail, Ssigma_tail_0, !repeat_tail, repeat_head.
+    unfold bins, pow; simpl. rewrite !Ssigma_plus, (repeat_S 1).
     rewrite <-Nat.sub_succ_l, Nat.sub_succ by easy. ring. }
   rewrite zip_with_tail, Ssigma_tail_0, Ssigmas_S_tail, sigseq_0_head.
   rewrite IH, Ssigma_plus by omega.
   rewrite Nat.pow_succ_r by omega; simpl; rewrite Nat.add_0_r.
-  rewrite Sall_zip_with, Splus_assoc, <-(Splus_assoc _ (#_)), IH by easy.
+  rewrite repeat_zip_with, Splus_assoc, <-(Splus_assoc _ (#_)), IH by easy.
   now rewrite (bins_sig_seq_SS (S n)), bins_diag, Splus_assoc by easy.
 Qed.
 
@@ -248,10 +246,8 @@ Proof.
     * rewrite !zip_with_head; congruence.
     * now rewrite H, H0. }
   induction Hst.
-  * rewrite nats_pow_tail, Ssigmas_S_tail.
-    induction n; simpl.
-    { repeat constructor. 
-      rewrite <-(Smult_1_r nats). apply (Rn_sig2 0). }
+  * rewrite nats_pow_tail, Ssigmas_S_tail. induction n as [|n IH]; simpl.
+    { repeat constructor. rewrite <-(Smult_1_r nats). apply (Rn_sig2 0). }
     constructor; auto. apply (Rn_sig2 (S n)).
   * rewrite Ssigmas_0_tail, nats_nats_pow_tail by easy.
     generalize n at 1 3. induction n as [|j IH]; intros n; simpl.
@@ -264,8 +260,4 @@ Proof.
   * now rewrite H, H0.
 Qed.
 Theorem Moessner n : Σ@{1,2,n} #1 ≡ nats ^^ S n.
-Proof.
-  apply bisimulation_equal with Rn.
-  { apply bisimulation_Rn. }
-  constructor.
-Qed.
+Proof. apply (bisimulation_equal _ _ _ bisimulation_Rn). constructor. Qed.

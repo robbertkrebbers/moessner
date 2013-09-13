@@ -5,15 +5,12 @@ Require Export Arith Omega Setoid Morphisms List NPeano.
 
 Arguments pow _ _ : simpl never.
 
-CoInductive Stream (A : Type) : Type :=
-  SCons : A → Stream A → Stream A.
+CoInductive Stream (A : Type) : Type := SCons : A → Stream A → Stream A.
 Arguments SCons {_} _ _.
 Infix ":::" := SCons (at level 60, right associativity).
 
-Definition head {A} (s : Stream A) : A :=
-  match s with x ::: _ => x end.
-Definition tail {A} (s : Stream A) : Stream A :=
-  match s with _ ::: t => t end.
+Definition head {A} (s : Stream A) : A := match s with x ::: _ => x end.
+Definition tail {A} (s : Stream A) : Stream A := match s with _ ::: t => t end.
 Notation "s `" := (tail s) (at level 10, format "s `").
 Arguments head _ _ : simpl never.
 Arguments tail _ _ : simpl never.
@@ -28,8 +25,8 @@ CoInductive equal {A:Type} (s t : Stream A) : Prop :=
   make_equal : head s = head t →  s` ≡ t` → s ≡ t
 where "s ≡ t" := (@equal _ s t).
 
-CoFixpoint Sall {A} (x : A) : Stream A := x ::: Sall x.
-Notation "# x" := (Sall x) (at level 15).
+CoFixpoint repeat {A} (x : A) : Stream A := x ::: repeat x.
+Notation "# x" := (repeat x) (at level 15).
 
 Section Stream_theorems.
   Context {A:Type}.
@@ -79,9 +76,9 @@ Section Stream_theorems.
     * intros (?&?&?); eauto using bisimulation_equal.
   Qed.
 
-  Definition Sall_head x : head (#x) = x := eq_refl.
-  Definition Sall_tail x : (#x)` = #x := eq_refl.
-  Lemma Sall_elt x i : #x !! i = x.
+  Definition repeat_head x : head (#x) = x := eq_refl.
+  Definition repeat_tail x : (#x)` = #x := eq_refl.
+  Lemma repeat_elt x i : #x !! i = x.
   Proof. induction i; simpl; auto. Qed.
 End Stream_theorems.
 
@@ -91,10 +88,10 @@ CoFixpoint zip_with {A B C} (f : A → B → C) (s : Stream A)
 Section zip_with.
   Context {A B C} (f : A → B → C).
 
-  Lemma zip_with_head s t : head (zip_with f s t) = f (head s) (head t).
-  Proof. reflexivity. Qed.
-  Lemma zip_with_tail s t : (zip_with f s t)` = zip_with f (s`) (t`).
-  Proof. reflexivity. Qed.
+  Definition zip_with_head s t :
+    head (zip_with f s t) = f (head s) (head t) := eq_refl.
+  Definition zip_with_tail s t :
+    (zip_with f s t)` = zip_with f (s`) (t`) := eq_rel.
 
   Lemma zip_with_elt s t i : zip_with f s t !! i = f (s !! i) (t !! i).
   Proof.
@@ -106,8 +103,8 @@ Section zip_with.
     intros s1 s2 Hs t1 t2 Ht; apply equal_elt; intros.
     now rewrite !zip_with_elt, Hs, Ht.
   Qed.
-  Lemma Sall_zip_with x y : #f x y ≡ zip_with f (#x) (#y).
-  Proof. apply equal_elt; intros i. now rewrite zip_with_elt, !Sall_elt. Qed.
+  Lemma repeat_zip_with x y : #f x y ≡ zip_with f (#x) (#y).
+  Proof. apply equal_elt; intros i. now rewrite zip_with_elt, !repeat_elt. Qed.
 End zip_with.
 
 (** Operations on streams of naturals *)
@@ -147,40 +144,30 @@ Qed.
 Lemma Sfrom_plus n m : Sfrom (n + m) ≡ #n ⊕ Sfrom m.
 Proof.
   apply equal_elt; intros i.
-  rewrite zip_with_elt, !Sfrom_elt, !Sall_elt. ring.
+  rewrite zip_with_elt, !Sfrom_elt, !repeat_elt. ring.
 Qed.
 Lemma Sfrom_S n : Sfrom (S n) ≡ #1 ⊕ Sfrom n.
 Proof. apply (Sfrom_plus 1). Qed.
-Lemma Sall_S n : #S n ≡ #1 ⊕ Sall n.
-Proof. apply (Sall_zip_with plus 1). Qed.
+Lemma repeat_S n : #S n ≡ #1 ⊕ repeat n.
+Proof. apply (repeat_zip_with plus 1). Qed.
 
 Lemma stream_semi_ring_theory :
   semi_ring_theory (#0) (#1) (zip_with plus) (zip_with mult) equal.
 Proof.
   split; intros; apply equal_elt; intros;
-    rewrite ?zip_with_elt, ?Sall_elt; ring.
+    rewrite ?zip_with_elt, ?repeat_elt; ring.
 Qed.
 Add Ring stream : stream_semi_ring_theory.
-Lemma Splus_0_l s : #0 ⊕ s ≡ s.
-Proof. ring. Qed.
-Lemma Splus_0_r s : s ⊕ #0 ≡ s.
-Proof. ring. Qed.
-Lemma Smult_0_l s : #0 ⊙ s ≡ #0.
-Proof. ring. Qed.
-Lemma Smult_0_r s : s ⊙ #0 ≡ #0.
-Proof. ring. Qed.
-Lemma Smult_1_l s : #1 ⊙ s ≡ s.
-Proof. ring. Qed.
-Lemma Smult_1_r s : s ⊙ #1 ≡ s.
-Proof. ring. Qed.
-Lemma Splus_assoc s t u : s ⊕ t ⊕ u ≡ s ⊕ (t ⊕ u).
-Proof. ring. Qed.
-Lemma Smult_assoc s t u : s ⊙ t ⊙ u ≡ s ⊙ (t ⊙ u).
-Proof. ring. Qed.
-Lemma Splus_comm s t : s ⊕ t ≡ t ⊕ s.
-Proof. ring. Qed.
-Lemma Smult_comm s t : s ⊙ t ≡ t ⊙ s.
-Proof. ring. Qed.
+Lemma Splus_0_l s : #0 ⊕ s ≡ s. Proof. ring. Qed.
+Lemma Splus_0_r s : s ⊕ #0 ≡ s. Proof. ring. Qed.
+Lemma Smult_0_l s : #0 ⊙ s ≡ #0. Proof. ring. Qed.
+Lemma Smult_0_r s : s ⊙ #0 ≡ #0. Proof. ring. Qed.
+Lemma Smult_1_l s : #1 ⊙ s ≡ s. Proof. ring. Qed.
+Lemma Smult_1_r s : s ⊙ #1 ≡ s. Proof. ring. Qed.
+Lemma Splus_assoc s t u : s ⊕ t ⊕ u ≡ s ⊕ (t ⊕ u). Proof. ring. Qed.
+Lemma Smult_assoc s t u : s ⊙ t ⊙ u ≡ s ⊙ (t ⊙ u). Proof. ring. Qed.
+Lemma Splus_comm s t : s ⊕ t ≡ t ⊕ s. Proof. ring. Qed.
+Lemma Smult_comm s t : s ⊙ t ≡ t ⊙ s. Proof. ring. Qed.
 Lemma Smult_plus_distr_l s t u : s ⊙ (t ⊕ u) ≡ (s ⊙ t) ⊕ (s ⊙ u).
 Proof. ring. Qed.
 Lemma Smult_plus_distr_r s t u : (t ⊕ u) ⊙ s ≡ (t ⊙ s) ⊕ (u ⊙ s).
@@ -189,16 +176,12 @@ Lemma Snats_tail : nats` ≡ nats ⊕ #1.
 Proof. rewrite Sfrom_tail, Sfrom_S. ring. Qed.
 
 Lemma Spow_head s n : head (s ^^ n) = head s ^ n.
-Proof.
-  induction n as [|n IH]; simpl. easy. now rewrite zip_with_head, IH.
-Qed.
+Proof. induction n as [|n IH]; simpl. easy. now rewrite zip_with_head, IH. Qed.
 Lemma Spow_tail s n : (s ^^ n)` = s` ^^ n.
-Proof.
-  induction n as [|n IH]; simpl. easy. now rewrite zip_with_tail, IH.
-Qed.
+Proof. induction n as [|n IH]; simpl. easy. now rewrite zip_with_tail, IH. Qed.
 Lemma Spow_elt s n i : (s ^^ n) !! i = (s !! i) ^ n.
 Proof.
-  induction n as [|n IH]; simpl; [now rewrite Sall_elt |].
+  induction n as [|n IH]; simpl; [now rewrite repeat_elt |].
   now rewrite zip_with_elt, IH.
 Qed.
 Instance: Proper (equal ==> eq ==> equal) Spow.
@@ -222,13 +205,13 @@ Proof.
 Qed.
 Lemma Ssum_move b s : Ssum b s ≡ #b ⊕ Σ s.
 Proof.
-  apply equal_elt. intros i. rewrite zip_with_elt, Sall_elt.
+  apply equal_elt. intros i. rewrite zip_with_elt, repeat_elt.
   revert b s. induction i as [|i IH]; intros b s; simpl.
   { rewrite !Ssum_head. ring. }
   rewrite !Ssum_tail, (IH (_ + b)), (IH (_ + 0)). ring.
 Qed.
 Lemma Ssum_aux_one b s : Ssum b s ⊕ #1 ≡ Ssum (S b) s.
-Proof. rewrite (Ssum_move b), (Ssum_move (S b)), (Sall_S b). ring. Qed.
+Proof. rewrite (Ssum_move b), (Ssum_move (S b)), (repeat_S b). ring. Qed.
 Lemma Splus_sum_aux s t a b :
   Ssum a s ⊕ Ssum b t ≡ Ssum (a + b) (s ⊕ t).
 Proof.
@@ -246,7 +229,7 @@ Lemma Ssum_mult n s : Σ (#n ⊙ s) ≡ #n ⊙ Σ s.
 Proof.
   induction n as [|n IH].
   { now rewrite !Smult_0_l, Ssum_0. }
-  now rewrite Sall_S, !Smult_plus_distr_r, !Smult_1_l, Ssum_plus, IH.
+  now rewrite repeat_S, !Smult_plus_distr_r, !Smult_1_l, Ssum_plus, IH.
 Qed.
 
 Definition Sdrop_head_0 s k : head (D@{0,k} s) = head (s`) := eq_refl.
@@ -280,7 +263,7 @@ Lemma Sdrop_mult n s i k : D@{i,k} (#n ⊙ s) ≡ #n ⊙ D@{i,k} s.
 Proof.
   induction n as [|n IH].
   { now rewrite !Smult_0_l, Sdrop_all. }
-  now rewrite Sall_S, !Smult_plus_distr_r, !Smult_1_l, Sdrop_plus, IH.
+  now rewrite repeat_S, !Smult_plus_distr_r, !Smult_1_l, Sdrop_plus, IH.
 Qed.
 
 Instance Ssigma_proper : Proper (eq ==> eq ==> equal ==> equal) Ssigma.
@@ -290,16 +273,16 @@ Proof. unfold Ssigma. rewrite Ssum_head, Sdrop_head_0. ring. Qed.
 Lemma Ssigma_head_S s i k : head (Σ@{S i,k} s) = head s.
 Proof. unfold Ssigma; rewrite Ssum_head, Sdrop_head_S. ring. Qed.
 Lemma Ssigma_tail_0 s k :
-  (Σ@{0,k} s)` ≡ Σ@{k-2,k} (s``) ⊕ Sall (head (s`)).
+  (Σ@{0,k} s)` ≡ Σ@{k-2,k} (s``) ⊕ repeat (head (s`)).
 Proof.
   unfold Ssigma. rewrite Ssum_tail, Sdrop_tail_0, Sdrop_head_0,
-    Ssum_move, Sall_zip_with. ring.
+    Ssum_move, repeat_zip_with. ring.
 Qed.
 Lemma Ssigma_tail_S s i k :
-  (Σ@{S i,k} s)` ≡ Σ@{i,k} (s`) ⊕ Sall (head s).
+  (Σ@{S i,k} s)` ≡ Σ@{i,k} (s`) ⊕ repeat (head s).
 Proof.
   unfold Ssigma. rewrite Ssum_tail, Sdrop_tail_S, Sdrop_head_S,
-    Ssum_move, Sall_zip_with. ring.
+    Ssum_move, repeat_zip_with. ring.
 Qed.
 Lemma Ssigma_plus s t i k : Σ@{i,k} (s ⊕ t) ≡ Σ@{i,k} s ⊕ Σ@{i,k} t.
 Proof. unfold Ssigma. now rewrite Sdrop_plus, Ssum_plus. Qed.

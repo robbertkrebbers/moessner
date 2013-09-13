@@ -30,7 +30,5 @@ Proof.
 Qed.
 Theorem Moessner_case1 : Σ@{1,2} #1 ≡ nats ^^ 1.
 Proof.
-  apply bisimulation_equal with R1.
-  { apply bisimulation_R1. }
-  rewrite Spow_1. constructor.
+  apply (bisimulation_equal _ _ _ bisimulation_R1). rewrite Spow_1. constructor.
 Qed.

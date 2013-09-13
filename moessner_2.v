@@ -14,22 +14,20 @@ Inductive R2 : relation (Stream nat) :=
 Instance: Proper (equal ==> equal ==> iff) R2.
 Proof. now split; apply R2_eq. Qed.
 
-Lemma Snats2 : (nats ^^ 2)` ≡ nats ⊙ (nats ⊕ #1) ⊕ nats ⊕ #1.
+Lemma nats_pow_tail : (nats ^^ 2)` ≡ nats ⊙ (nats ⊕ #1) ⊕ nats ⊕ #1.
 Proof. rewrite Spow_tail, Snats_tail, Spow_S, Spow_1; ring. Qed.
-Lemma Snats3 :
-  (nats ⊙ (nats ⊕ #1))` ≡
-    (nats ⊙ (nats ⊕ #1)) ⊕ nats ⊕ nats ⊕ #1 ⊕ #1.
-Proof. rewrite !zip_with_tail, Snats_tail, Sall_tail; ring. Qed.
-Lemma Sigma2132 :
+Lemma nats_nats_pow_tail :
+  (nats ⊙ (nats ⊕ #1))` ≡ (nats ⊙ (nats ⊕ #1)) ⊕ nats ⊕ nats ⊕ #1 ⊕ #1.
+Proof. rewrite !zip_with_tail, Snats_tail, repeat_tail; ring. Qed.
+Lemma Ssigma2132_tail :
   (Σ@{1,2} Σ@{2,3} #1)` ≡ Σ@{0,2} Σ@{1,3} #1 ⊕ Σ@{0,2} #1 ⊕ #1.
 Proof. now rewrite !Ssigma_tail_S, Ssigma_head_S, Ssigma_plus. Qed.
-Lemma Sigma2031 :
-  (Σ@{0,2} Σ@{1,3} #1)` ≡
-    (Σ@{0,2} Σ@{1,3} #1) ⊕ Σ@{0,2} #1 ⊕ Σ@{0,2} #1 ⊕ #1 ⊕ #1.
+Lemma Ssigma2031_tail :
+  (Σ@{0,2} Σ@{1,3}#1)` ≡ Σ@{0,2} Σ@{1,3} #1 ⊕ Σ@{0,2} #1 ⊕ Σ@{0,2} #1 ⊕ #1 ⊕ #1.
 Proof.
   rewrite Ssigma_tail_0, Ssigma_tail_S, zip_with_tail, zip_with_head; simpl.
-  rewrite !Sall_head, Sall_tail, Ssigma_tail_0, !Sall_tail, Sall_head; simpl.
-  rewrite !Ssigma_plus, (Sall_S 1). ring.
+  rewrite !repeat_head, repeat_tail, Ssigma_tail_0.
+  rewrite !repeat_tail, repeat_head, !Ssigma_plus, (repeat_S 1); simpl. ring.
 Qed.
 
 Lemma bisimulation_R2 : bisimulation R2.
@@ -48,15 +46,11 @@ Proof.
     rewrite Splus_comm. repeat constructor.
   * rewrite Ssigma_tail_0, Sfrom_S; simpl.
     rewrite Splus_comm. repeat constructor.
-  * rewrite Sigma2132, Snats2. repeat constructor.
-  * rewrite Sigma2031, Snats3. repeat constructor.
+  * rewrite Ssigma2132_tail, nats_pow_tail. repeat constructor.
+  * rewrite Ssigma2031_tail, nats_nats_pow_tail. repeat constructor.
   * constructor.
   * simpl. now repeat constructor.
   * now rewrite H, H0.
 Qed.
 Theorem Moessner_case2 : Σ@{1,2} Σ@{2,3} #1 ≡ nats ^^ 2.
-Proof.
-  apply bisimulation_equal with R2.
-  { apply bisimulation_R2. }
-  constructor.
-Qed.
+Proof. apply (bisimulation_equal _ _ _ bisimulation_R2). constructor. Qed.
