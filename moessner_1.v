@@ -6,8 +6,8 @@ Inductive R1 : relation (Stream nat) :=
   | R1_base12 : R1 (Σ@{1,2} (#1)) nats
   | R1_base02 : R1 (Σ@{0,2} (#1)) nats
   | R1_refl s : R1 s s
-  | R1_plus a1 b1 a2 b2 : R1 a1 b1 → R1 a2 b2 → R1 (a1 ⊕ a2) (b1 ⊕ b2)
-  | R1_eq s t u v : s ≡ u → t ≡ v → R1 u v → R1 s t.
+  | R1_plus s1 s2 t1 t2 : R1 s1 t1 → R1 s2 t2 → R1 (s1 ⊕ s2) (t1 ⊕ t2)
+  | R1_eq s1 s2 t1 t2 : s1 ≡ s2 → t1 ≡ t2 → R1 s1 t1 → R1 s2 t2.
 
 Instance: Proper (equal ==> equal ==> iff) R1.
 Proof. now split; apply R1_eq. Qed.
@@ -20,13 +20,13 @@ Proof.
     * now rewrite Ssigma_head_0.
     * easy.
     * rewrite !zip_with_head; congruence.
-    * now rewrite H, H0. }
+    * now rewrite <-H, <-H0. }
   induction Hst.
   * rewrite Ssigma_tail_S, Snats_tail. repeat constructor.
   * rewrite Ssigma_tail_0, Snats_tail. repeat constructor.
   * constructor.
   * now constructor.
-  * now rewrite H, H0.
+  * now rewrite <-H, <-H0.
 Qed.
 Theorem Moessner_case1 : Σ@{1,2} #1 ≡ nats ^^ 1.
 Proof.

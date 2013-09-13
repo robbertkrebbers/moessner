@@ -14,16 +14,16 @@ where "Σ@{ i , k , n } s" := (Ssigmas i k n s).
 Instance: ∀ n k i, Proper (equal ==> equal) (Ssigmas i k n).
 Proof. induction n; simpl; intros; solve_proper. Qed.
 
-Inductive Rn : Stream nat → Stream nat → Prop :=
+Inductive Rn : relation (Stream nat) :=
   | Rn_sig1 n : Rn (Σ@{1,2,n} #1) (nats ^^ S n)
   | Rn_sig2 n : Rn (Σ@{0,2,n} #1) (nats ⊙ (nats ⊕ #1) ^^ n)
   | Rn_refl s : Rn s s
-  | Rn_plus a1 b1 a2 b2 : Rn a1 b1 → Rn a2 b2 → Rn (a1 ⊕ a2) (b1 ⊕ b2)
-  | Rn_eq s t u v : s ≡ u → t ≡ v → Rn u v → Rn s t.
+  | Rn_plus s1 s2 t1 t2 : Rn s1 t1 → Rn s2 t2 → Rn (s1 ⊕ s2) (t1 ⊕ t2)
+  | Rn_eq s1 s2 t1 t2 : s1 ≡ s2 → t1 ≡ t2 → Rn s1 t1 → Rn s2 t2.
 
 Instance: Proper (equal ==> equal ==> iff) Rn.
 Proof. now split; apply Rn_eq. Qed.
-Lemma Rn_mult_all_l n a b : Rn a b → Rn (#n ⊙ a) (#n ⊙ b).
+Lemma Rn_mult_all_l n s t : Rn s t → Rn (#n ⊙ s) (#n ⊙ t).
 Proof.
   induction n as [|n IH]; [rewrite !Smult_0_l; constructor |].
   rewrite repeat_S, !Smult_plus_distr_r, !Smult_1_l. repeat constructor; auto.
@@ -58,7 +58,7 @@ Fixpoint sig_seq (i k n : nat) : Stream nat :=
   | S n => Σ@{i,k,S n} #1 ⊕ sig_seq i k n
   end.
 Lemma sigseq_S i k n :
-  sig_seq i k (S n) ≡ Σ@{i,k} (sig_seq (S i) (S k) n) ⊕ #1.
+  sig_seq i k (S n) ≡ Σ@{i,k} sig_seq (S i) (S k) n ⊕ #1.
 Proof.
   simpl. revert i k. induction n as [|n IH]; intros i k; simpl.
   { rewrite Ssigma_plus. ring. }
@@ -96,17 +96,13 @@ Proof.
 Qed.
 
 Fixpoint bins (i j : nat) : nat :=
-  match j with 
-  | 0 => 1
-  | S j => bin i (S j) + bins i j
-  end.
+  match j with  0 => 1 | S j => bin i (S j) + bins i j end.
 Lemma bins_0 j : bins j 0 = 1.
 Proof. induction j; simpl; auto. Qed.
 Lemma bins_S i j : bins (S i) (S j) = bins i (S j) + bins i j.
 Proof.
   simpl. rewrite <-!Nat.add_assoc, Nat.add_cancel_l.
-  revert i. induction j as [|j IH]; intros i; simpl.
-  { now rewrite bin_0. }
+  revert i. induction j as [|j IH]; intros i; simpl; [now rewrite bin_0 |].
   transitivity (bin i (S j) + (bin i (S j) +
     (bins i j + bins i j))); [rewrite <-IH; ring|ring].
 Qed.
@@ -217,7 +213,7 @@ Proof.
   rewrite <-!Nat.sub_succ_l, !Nat.sub_succ, Nat.sub_0_r by omega.
   rewrite Ssigma_plus, Ssigma_mult. ring.
 Qed.
-Lemma Ssigmas_0_tail n k : 2 ≤ k → (Σ@{0,k,n} #1)` ≡ bins_sig_seq n k n.
+Lemma Ssigmas_0_tail k n : 2 ≤ k → (Σ@{0,k,n} #1)` ≡ bins_sig_seq n k n.
 Proof.
   intros Hk. destruct n as [|n]; simpl.
   { rewrite bins_sig_seq_0, Ssigma_tail_0, !repeat_tail, repeat_head.
@@ -244,7 +240,7 @@ Proof.
     * now rewrite Ssigmas_0_head, nats_nats_pow_head.
     * easy.
     * rewrite !zip_with_head; congruence.
-    * now rewrite H, H0. }
+    * now rewrite <-H, <-H0. }
   induction Hst.
   * rewrite nats_pow_tail, Ssigmas_S_tail. induction n as [|n IH]; simpl.
     { repeat constructor. rewrite <-(Smult_1_r nats). apply (Rn_sig2 0). }
@@ -257,7 +253,7 @@ Proof.
     apply Rn_mult_all_l, (Rn_sig2 (S j)).
   * constructor.
   * now constructor.
-  * now rewrite H, H0.
+  * now rewrite <-H, <-H0.
 Qed.
 Theorem Moessner n : Σ@{1,2,n} #1 ≡ nats ^^ S n.
 Proof. apply (bisimulation_equal _ _ _ bisimulation_Rn). constructor. Qed.

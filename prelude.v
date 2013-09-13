@@ -10,7 +10,7 @@ Arguments SCons {_} _ _.
 Infix ":::" := SCons (at level 60, right associativity).
 
 Definition head {A} (s : Stream A) : A := match s with x ::: _ => x end.
-Definition tail {A} (s : Stream A) : Stream A := match s with _ ::: t => t end.
+Definition tail {A} (s : Stream A) : Stream A := match s with _ ::: s => s end.
 Notation "s `" := (tail s) (at level 10, format "s `").
 Arguments head _ _ : simpl never.
 Arguments tail _ _ : simpl never.
@@ -21,12 +21,13 @@ Fixpoint elt {A} (i : nat) (s : Stream A) : A :=
 where "s !! i" := (elt i s).
 
 Reserved Infix "≡" (at level 70).
-CoInductive equal {A:Type} (s t : Stream A) : Prop :=
+CoInductive equal {A} (s t : Stream A) : Prop :=
   make_equal : head s = head t →  s` ≡ t` → s ≡ t
 where "s ≡ t" := (@equal _ s t).
 
-CoFixpoint repeat {A} (x : A) : Stream A := x ::: repeat x.
-Notation "# x" := (repeat x) (at level 15).
+Reserved Notation "# x" (at level 15).
+CoFixpoint repeat {A} (x : A) : Stream A := x ::: # x
+where "# x" := (repeat x).
 
 Section Stream_theorems.
   Context {A:Type}.
@@ -41,7 +42,7 @@ Section Stream_theorems.
     * cofix; intros ??? [??] [??]; constructor; etransitivity; eauto.
   Qed.
 
-  Global Instance SCons_proper : Proper (eq ==> equal ==> equal) (@SCons A).
+  Global Instance SCons_proper x : Proper (equal ==> equal) (SCons x).
   Proof. now constructor. Qed.
   Global Instance head_proper : Proper (equal ==> eq) (@head A).
   Proof. now intros ?? [??]. Qed.
@@ -91,7 +92,7 @@ Section zip_with.
   Definition zip_with_head s t :
     head (zip_with f s t) = f (head s) (head t) := eq_refl.
   Definition zip_with_tail s t :
-    (zip_with f s t)` = zip_with f (s`) (t`) := eq_rel.
+    (zip_with f s t)` = zip_with f (s`) (t`) := eq_refl.
 
   Lemma zip_with_elt s t i : zip_with f s t !! i = f (s !! i) (t !! i).
   Proof.
@@ -110,12 +111,14 @@ End zip_with.
 (** Operations on streams of naturals *)
 Infix "⊕" := (zip_with plus) (at level 50, left associativity).
 Infix "⊙" := (zip_with mult) (at level 40, left associativity).
+Reserved Notation "s ^^ n" (at level 30, right associativity).
+Fixpoint Spow (s : Stream nat) (n : nat) : Stream nat :=
+  match n with 0 => #1 | S n => s ⊙ s ^^ n end
+where "s ^^ n" := (Spow s n).
 
 CoFixpoint Sfrom (n : nat) : Stream nat := n ::: Sfrom (S n).
 Notation nats := (Sfrom 1).
-Fixpoint Spow (s : Stream nat) (n : nat) : Stream nat :=
-  match n with 0 => #1 | S n => s ⊙ Spow s n end.
-Notation "s ^^ n" := (Spow s n) (at level 30, right associativity).
+
 CoFixpoint Ssum (b : nat) (s : Stream nat) : Stream nat :=
   head s + b ::: Ssum (head s + b) (s`).
 Notation "'Σ' s" := (Ssum 0 s) (at level 20, format "Σ  s").
@@ -195,34 +198,33 @@ Definition Spow_S s n : s ^^ S n = s ⊙ s ^^ n := eq_refl.
 Lemma Spow_1 s : s ^^ 1 ≡ s.
 Proof. rewrite !Spow_S, Spow_0; ring. Qed.
 
-Definition Ssum_head b s : head (Ssum b s) = head s + b := eq_refl.
-Definition Ssum_tail b s : (Ssum b s)` = Ssum (head s + b) (s`) := eq_refl.
+Definition Ssum_head_ b s : head (Ssum b s) = head s + b := eq_refl.
+Definition Ssum_tail_ b s : (Ssum b s)` = Ssum (head s + b) (s`) := eq_refl.
 Instance Ssum_aux_proper b : Proper (equal ==> equal) (Ssum b).
 Proof.
   revert b. cofix; intros ??? [Hhd Htl]; constructor; simpl.
-  { now rewrite !Ssum_head, Hhd. }
-  rewrite !Ssum_tail, Hhd. now apply (Ssum_aux_proper (_ + _)).
+  { now rewrite !Ssum_head_, Hhd. }
+  rewrite !Ssum_tail_, Hhd. now apply (Ssum_aux_proper (_ + _)).
 Qed.
 Lemma Ssum_move b s : Ssum b s ≡ #b ⊕ Σ s.
 Proof.
   apply equal_elt. intros i. rewrite zip_with_elt, repeat_elt.
   revert b s. induction i as [|i IH]; intros b s; simpl.
-  { rewrite !Ssum_head. ring. }
-  rewrite !Ssum_tail, (IH (_ + b)), (IH (_ + 0)). ring.
+  { rewrite !Ssum_head_. ring. }
+  rewrite !Ssum_tail_, (IH (_ + b)), (IH (_ + 0)). ring.
 Qed.
-Lemma Ssum_aux_one b s : Ssum b s ⊕ #1 ≡ Ssum (S b) s.
-Proof. rewrite (Ssum_move b), (Ssum_move (S b)), (repeat_S b). ring. Qed.
-Lemma Splus_sum_aux s t a b :
-  Ssum a s ⊕ Ssum b t ≡ Ssum (a + b) (s ⊕ t).
+Lemma Ssum_head s : head (Σ s) = head s.
+Proof. now rewrite Ssum_head_, Nat.add_0_r. Qed.
+Lemma Ssum_tail s : (Σ s)` ≡ #head s ⊕ Σ (s`).
+Proof. now rewrite Ssum_tail_, Ssum_move, Nat.add_0_r. Qed.
+Lemma Ssum_plus s t : Σ (s ⊕ t) ≡ Σ s ⊕ Σ t.
 Proof.
   apply equal_elt. intros i. rewrite zip_with_elt.
-  revert a b s t. induction i as [|i IH]; intros a b s t; simpl.
-  { rewrite !Ssum_head, zip_with_head. ring. }
-  rewrite !Ssum_tail, zip_with_head, zip_with_tail, IH.
-  do 2 f_equal; ring.
+  revert s t. induction i as [|i IH]; intros s t; simpl.
+  { now rewrite !Ssum_head, zip_with_head. }
+  rewrite !Ssum_tail, zip_with_tail, !zip_with_elt, IH.
+  rewrite !repeat_elt, zip_with_head. ring.
 Qed.
-Lemma Ssum_plus s t : Σ (s ⊕ t) ≡ Σ s ⊕ Σ t.
-Proof. now rewrite Splus_sum_aux. Qed.
 Lemma Ssum_0 : Σ #0 ≡ #0.
 Proof. cofix. now constructor. Qed.
 Lemma Ssum_mult n s : Σ (#n ⊙ s) ≡ #n ⊙ Σ s.
@@ -256,8 +258,7 @@ Proof.
 Qed.
 Lemma Sdrop_all i k n : D@{i,k} #n ≡ #n.
 Proof.
-  revert i k. cofix; intros [|i] k;
-    constructor; first [easy | apply Sdrop_all].
+  revert i k. cofix; intros [|i] k; constructor; first [easy|apply Sdrop_all].
 Qed.
 Lemma Sdrop_mult n s i k : D@{i,k} (#n ⊙ s) ≡ #n ⊙ D@{i,k} s.
 Proof.
@@ -272,18 +273,10 @@ Lemma Ssigma_head_0 s k : head (Σ@{0,k} s) = head (s`).
 Proof. unfold Ssigma. rewrite Ssum_head, Sdrop_head_0. ring. Qed.
 Lemma Ssigma_head_S s i k : head (Σ@{S i,k} s) = head s.
 Proof. unfold Ssigma; rewrite Ssum_head, Sdrop_head_S. ring. Qed.
-Lemma Ssigma_tail_0 s k :
-  (Σ@{0,k} s)` ≡ Σ@{k-2,k} (s``) ⊕ repeat (head (s`)).
-Proof.
-  unfold Ssigma. rewrite Ssum_tail, Sdrop_tail_0, Sdrop_head_0,
-    Ssum_move, repeat_zip_with. ring.
-Qed.
-Lemma Ssigma_tail_S s i k :
-  (Σ@{S i,k} s)` ≡ Σ@{i,k} (s`) ⊕ repeat (head s).
-Proof.
-  unfold Ssigma. rewrite Ssum_tail, Sdrop_tail_S, Sdrop_head_S,
-    Ssum_move, repeat_zip_with. ring.
-Qed.
+Lemma Ssigma_tail_0 s k : (Σ@{0,k} s)` ≡ Σ@{k-2,k} (s``) ⊕ #head (s`).
+Proof. unfold Ssigma. rewrite Ssum_tail, Sdrop_tail_0, Sdrop_head_0. ring. Qed.
+Lemma Ssigma_tail_S s i k : (Σ@{S i,k} s)` ≡ Σ@{i,k} (s`) ⊕ #head s.
+Proof. unfold Ssigma. rewrite Ssum_tail, Sdrop_tail_S, Sdrop_head_S. ring. Qed.
 Lemma Ssigma_plus s t i k : Σ@{i,k} (s ⊕ t) ≡ Σ@{i,k} s ⊕ Σ@{i,k} t.
 Proof. unfold Ssigma. now rewrite Sdrop_plus, Ssum_plus. Qed.
 Lemma Ssigma_0 i k : Σ@{i,k} #0 ≡ #0.

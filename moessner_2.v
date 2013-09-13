@@ -8,8 +8,8 @@ Inductive R2 : relation (Stream nat) :=
   | R2_base2132 : R2 (Σ@{1,2} Σ@{2,3} #1) (nats ^^ 2)
   | R2_base2031 : R2 (Σ@{0,2} Σ@{1,3} #1) (nats ⊙ (nats ⊕ #1))
   | R2_refl s : R2 s s
-  | R2_plus a1 b1 a2 b2 : R2 a1 b1 → R2 a2 b2 → R2 (a1 ⊕ a2) (b1 ⊕ b2)
-  | R2_eq s t u v : s ≡ u → t ≡ v → R2 u v → R2 s t.
+  | R2_plus s1 s2 t1 t2 : R2 s1 t1 → R2 s2 t2 → R2 (s1 ⊕ s2) (t1 ⊕ t2)
+  | R2_eq s1 s2 t1 t2 : s1 ≡ s2 → t1 ≡ t2 → R2 s1 t1 → R2 s2 t2.
 
 Instance: Proper (equal ==> equal ==> iff) R2.
 Proof. now split; apply R2_eq. Qed.
@@ -40,7 +40,7 @@ Proof.
     * now rewrite Ssigma_head_0, Ssigma_tail_S, zip_with_head, Ssigma_head_0.
     * easy.
     * rewrite !zip_with_head; congruence.
-    * now rewrite H, H0. }
+    * now rewrite <-H, <-H0. }
   induction Hst.
   * rewrite Ssigma_tail_S, Sfrom_S; simpl.
     rewrite Splus_comm. repeat constructor.
@@ -50,7 +50,7 @@ Proof.
   * rewrite Ssigma2031_tail, nats_nats_pow_tail. repeat constructor.
   * constructor.
   * simpl. now repeat constructor.
-  * now rewrite H, H0.
+  * now rewrite <-H, <-H0.
 Qed.
 Theorem Moessner_case2 : Σ@{1,2} Σ@{2,3} #1 ≡ nats ^^ 2.
 Proof. apply (bisimulation_equal _ _ _ bisimulation_R2). constructor. Qed.
