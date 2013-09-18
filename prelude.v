@@ -20,9 +20,9 @@ Arguments head _ _ : simpl never.
 Arguments tail _ _ : simpl never.
 
 Reserved Infix "!!" (at level 20).
-Fixpoint elt {A} (i : nat) (s : Stream A) : A :=
+Fixpoint elt {A} (s : Stream A) (i : nat) : A :=
   match i with O => head s | S i => s` !! i end
-where "s !! i" := (elt i s).
+where "s !! i" := (elt s i).
 
 Reserved Infix "≡" (at level 70).
 CoInductive equal {A} (s t : Stream A) : Prop :=
@@ -37,8 +37,8 @@ Reserved Notation "D@{ i , k } s"
    format "D@{ i , k }  s").
 CoFixpoint Sdrop {A} (i k : nat) (s : Stream A) : Stream A :=
   match i with 
-  | O => head (s`) ::: D@{k-2,k} (s``)
-  | S i => head s ::: D@{i,k} (s`)
+  | O => head (s`) ::: D@{k-2,k} s``
+  | S i => head s ::: D@{i,k} s`
   end
 where "D@{ i , k } s" := (Sdrop i k s).
 
@@ -53,9 +53,9 @@ Section Stream_theorems.
   Definition repeat_tail x : (#x)` = #x := eq_refl.
   Definition Sdrop_head_0 k s : head (D@{0,k} s) = head (s`) := eq_refl.
   Definition Sdrop_head_S i k s : head (D@{S i,k} s) = head s := eq_refl.
-  Definition Sdrop_tail_0 k s : (D@{0,k} s)` = D@{k-2,k} (s``) := eq_refl.
+  Definition Sdrop_tail_0 k s : (D@{0,k} s)` = D@{k-2,k} s`` := eq_refl.
   Definition Sdrop_tail_S i k (s : Stream A) :
-    (D@{S i,k} s)` = D@{i,k} (s`) := eq_refl.
+    (D@{S i,k} s)` = D@{i,k} s` := eq_refl.
 
   Lemma head_tail s : head s ::: tail s = s.
   Proof. now destruct s. Qed.
@@ -74,8 +74,11 @@ Section Stream_theorems.
   Proof. now intros ?? [??]. Qed.
   Global Instance tail_proper : Proper (equal ==> equal) (@tail A).
   Proof. now intros ?? [??]. Qed.
-  Global Instance elt_proper n : Proper (equal ==> eq) (@elt A n).
-  Proof. induction n; intros ?? [??]; simpl; auto. Qed.
+  Global Instance elt_proper : Proper (equal ==> eq ==> eq) (@elt A).
+  Proof.
+    intros s t Hst i ? <-. revert s t Hst.
+    induction i as [|i IH]; intros; simpl. apply Hst. apply IH, Hst.
+  Qed.
   Global Instance Sdrop_proper i k : Proper (equal ==> equal) (@Sdrop A i k).
   Proof.
     intros s t Hst; revert s t Hst i k.
@@ -202,7 +205,7 @@ Notation nats := (Sfrom 1).
 CoFixpoint Ssum (i : Z) (s : Stream Z) : Stream Z :=
   head s + i ::: Ssum (head s + i) (s`).
 Notation "'Σ' s" := (Ssum 0 s) (at level 20, format "Σ  s").
-Definition Ssigma (i k : nat) (s : Stream Z) : Stream Z := Σ (D@{i,k} s).
+Definition Ssigma (i k : nat) (s : Stream Z) : Stream Z := Σ D@{i,k} s.
 Notation "Σ@{ i , k } s" := (Ssigma i k s)
   (at level 20, i at level 1, k at level 1, right associativity,
    format "Σ@{ i , k }  s").
@@ -293,7 +296,7 @@ Proof.
 Qed.
 Lemma Ssum_head s : head (Σ s) = head s.
 Proof. now rewrite Ssum_head_, Z.add_0_r. Qed.
-Lemma Ssum_tail s : (Σ s)` ≡ #head s ⊕ Σ (s`).
+Lemma Ssum_tail s : (Σ s)` ≡ #head s ⊕ Σ s`.
 Proof. now rewrite Ssum_tail_, Ssum_move, Z.add_0_r. Qed.
 Lemma Ssum_plus s t : Σ (s ⊕ t) ≡ Σ s ⊕ Σ t.
 Proof.
@@ -329,9 +332,9 @@ Lemma Ssigma_head_0 s k : head (Σ@{0,k} s) = head (s`).
 Proof. unfold Ssigma. rewrite Ssum_head, Sdrop_head_0. ring. Qed.
 Lemma Ssigma_head_S s i k : head (Σ@{S i,k} s) = head s.
 Proof. unfold Ssigma; rewrite Ssum_head, Sdrop_head_S. ring. Qed.
-Lemma Ssigma_tail_0 s k : (Σ@{0,k} s)` ≡ #head (s`) ⊕ Σ@{k-2,k} (s``).
+Lemma Ssigma_tail_0 s k : (Σ@{0,k} s)` ≡ #head (s`) ⊕ Σ@{k-2,k} s``.
 Proof. unfold Ssigma. rewrite Ssum_tail, Sdrop_tail_0, Sdrop_head_0. ring. Qed.
-Lemma Ssigma_tail_S s i k : (Σ@{S i,k} s)` ≡ #head s ⊕ Σ@{i,k} (s`).
+Lemma Ssigma_tail_S s i k : (Σ@{S i,k} s)` ≡ #head s ⊕ Σ@{i,k} s`.
 Proof. unfold Ssigma. rewrite Ssum_tail, Sdrop_tail_S, Sdrop_head_S. ring. Qed.
 Lemma Ssigma_plus s t i k : Σ@{i,k} (s ⊕ t) ≡ Σ@{i,k} s ⊕ Σ@{i,k} t.
 Proof. unfold Ssigma. now rewrite Sdrop_zip_with, Ssum_plus. Qed.

@@ -74,8 +74,7 @@ Fixpoint sig_seq (i k n : nat) : Stream Z :=
   | O => #1 ⊕ Σ@{i,k} #1
   | S n => Σ@{i,k,S n} #1 ⊕ sig_seq i k n
   end.
-Lemma sigseq_S i k n :
-  sig_seq i k (S n) ≡ #1 ⊕ Σ@{i,k} sig_seq (S i) (S k) n.
+Lemma sigseq_S i k n : sig_seq i k (S n) ≡ #1 ⊕ Σ@{i,k} sig_seq (S i) (S k) n.
 Proof.
   simpl. revert i k. induction n as [|n IH]; intros i k; simpl.
   { rewrite Ssigma_plus. ring. }
@@ -95,43 +94,43 @@ Proof.
     zip_with_head, Sfrom_head, repeat_head, Z.mul_1_l.
 Qed.
 
-Fixpoint bin (i j : nat) : Z :=
-  match i, j with
-  | i, O => 1
-  | O, S j => 0
-  | S i, S j => bin i (S j) + bin i j
+Fixpoint bin (n i : nat) : Z :=
+  match n, i with
+  | n, O => 1
+  | O, S i => 0
+  | S n, S i => bin n (S i) + bin n i
   end.
-Lemma bin_0 i : bin i 0 = 1.
-Proof. now destruct i. Qed.
-Lemma bin_overflow i j : (i < j)%nat → bin i j = 0.
+Lemma bin_0 n : bin n 0 = 1.
+Proof. now destruct n. Qed.
+Lemma bin_overflow n i : (n < i)%nat → bin n i = 0.
 Proof.
-  revert j; induction i as [|i IH]; intros [|j] ?; simpl; rewrite ?IH; omega.
+  revert i; induction n as [|n IH]; intros [|i] ?; simpl; rewrite ?IH; omega.
 Qed.
-Lemma bin_diag i : bin i i = 1.
+Lemma bin_diag n : bin n n = 1.
 Proof.
-  induction i as [|i IH]; simpl; auto. rewrite IH, bin_overflow; omega.
+  induction n as [|n IH]; simpl; auto. rewrite IH, bin_overflow; omega.
 Qed.
 
-Fixpoint bins (i j : nat) : Z :=
-  match j with O => 1 | S j => bin i (S j) + bins i j end.
-Lemma bins_0 j : bins j 0 = 1.
-Proof. induction j; simpl; auto. Qed.
-Lemma bins_S i j : bins (S i) (S j) = bins i (S j) + bins i j.
+Fixpoint bins (n i : nat) : Z :=
+  match i with O => 1 | S i => bin n (S i) + bins n i end.
+Lemma bins_0 n : bins n 0 = 1.
+Proof. induction n; simpl; auto. Qed.
+Lemma bins_S n i : bins (S n) (S i) = bins n (S i) + bins n i.
 Proof.
   simpl. rewrite <-!Z.add_assoc, Z.add_cancel_l.
-  revert i. induction j as [|j IH]; intros i; simpl; [now rewrite bin_0 |].
-  transitivity (bin i (S j) + (bin i (S j) +
-    (bins i j + bins i j))); [rewrite <-IH; ring|ring].
+  revert n. induction i as [|i IH]; intros n; simpl; [now rewrite bin_0 |].
+  transitivity (bin n (S i) + (bin n (S i) +
+    (bins n i + bins n i))); [rewrite <-IH; ring|ring].
 Qed.
-Lemma bins_pred i j :
-  (0 < i)%nat → (0 < j)%nat →
-  bins i j = bins (pred i) j + bins (pred i) (pred j).
-Proof. intros. destruct i as [|i], j as [|j]; try omega. apply bins_S. Qed.
-Lemma bins_SS i : bins (S i) (S i) = bins i i + bins i i.
+Lemma bins_pred n i :
+  (0 < n)%nat → (0 < i)%nat →
+  bins n i = bins (pred n) i + bins (pred n) (pred i).
+Proof. intros. destruct n as [|n], i as [|i]; try omega. apply bins_S. Qed.
+Lemma bins_SS n : bins (S n) (S n) = bins n n + bins n n.
 Proof. rewrite bins_S; simpl. rewrite bin_overflow by omega. ring. Qed.
-Lemma bins_diag i : bins i i = 2 ^ i.
+Lemma bins_diag n : bins n n = 2 ^ n.
 Proof.
-  induction i as [|i IH]; [easy|].
+  induction n as [|n IH]; [easy|].
   rewrite Nat2Z.inj_succ, Z.pow_succ_r, bins_SS, IH by omega. ring.
 Qed.
 
@@ -253,6 +252,20 @@ Proof.
   rewrite !Ssigma_plus, !(repeat_zip_with Z.mul), !repeat_2. ring.
 Qed.
 
+Lemma Rn_sig_seq_nat_seq n : Rn (sig_seq 0 2 n) (nat_seq n).
+Proof.
+  induction n as [|n IH]; simpl.
+  { repeat constructor. rewrite <-(Smult_1_r nats). apply (Rn_sig2 0). }
+  constructor; auto. apply (Rn_sig2 (S n)).
+Qed.
+Lemma Rn_bins_sig_seq_bins_seq n i : Rn (bins_sig_seq n 2 i) (bins_seq n i).
+Proof.
+  induction i as [|i IH]; simpl.
+    { apply Rn_mult; repeat constructor.
+      rewrite <-(Smult_1_r nats). apply (Rn_sig2 0). }
+  constructor; auto. rewrite Smult_assoc. apply Rn_mult, (Rn_sig2 (S i)).
+Qed.
+
 (** The final theorem *)
 Lemma bisimulation_Rn : bisimulation Rn.
 Proof.
@@ -265,15 +278,9 @@ Proof.
     * rewrite !zip_with_head; congruence.
     * now rewrite <-H, <-H0. }
   induction Hst.
-  * rewrite nats_pow_tail, Ssigmas_S_tail. induction n as [|n IH]; simpl.
-    { repeat constructor. rewrite <-(Smult_1_r nats). apply (Rn_sig2 0). }
-    constructor; auto. apply (Rn_sig2 (S n)).
+  * rewrite nats_pow_tail, Ssigmas_S_tail. apply Rn_sig_seq_nat_seq.
   * rewrite Ssigmas_0_tail, nats_nats_pow_tail by easy.
-    generalize n at 1 3. induction n as [|j IH]; intros n; simpl.
-    { apply Rn_mult; repeat constructor.
-      rewrite <-(Smult_1_r nats). apply (Rn_sig2 0). }
-    constructor; auto. rewrite Smult_assoc.
-    apply Rn_mult, (Rn_sig2 (S j)).
+    apply Rn_bins_sig_seq_bins_seq.
   * constructor.
   * now constructor.
   * now constructor.
@@ -288,20 +295,24 @@ Proof.
   unfold Ssigma. now rewrite Sdrop_repeat, Ssum_1.
 Qed.
 
+Lemma Moessner_ext_help a d : Σ (a ::: #d) ≡ #d ⊙ nats ⊕ #(a - d).
+Proof.
+  constructor.
+  { rewrite Ssum_head, !zip_with_head, !repeat_head, Sfrom_head.
+    rewrite SCons_head. ring. }
+  rewrite Ssum_tail, !zip_with_tail, !repeat_tail, Sfrom_tail.
+  rewrite SCons_head, SCons_tail, Ssum_repeat, repeat_zip_with. ring.
+Qed.
+
 Corollary Moessner_ext a d n :
   Σ@{1,2,n} (a ::: #d) ≡ Σ (a ::: #d) ⊙ nats ^^ n.
 Proof.
-  assert (Σ (a ::: #d) ≡ #d ⊙ nats ⊕ #(a - d)) as help.
-  { constructor.
-    { rewrite Ssum_head, !zip_with_head, !repeat_head, Sfrom_head.
-      rewrite SCons_head. ring. }
-    rewrite Ssum_tail, !zip_with_tail, !repeat_tail, Sfrom_tail.
-    rewrite SCons_head, SCons_tail, Ssum_repeat, repeat_zip_with. ring. }
   destruct n as [|n]; rewrite ?Ssigmas_S_alt; simpl; unfold Ssigma.
   { rewrite <-(head_tail (D@{_,_} _)), Sdrop_head_S, Sdrop_tail_S.
-    rewrite SCons_head, SCons_tail, Sdrop_repeat, !help, Spow_0. ring. }
+    rewrite SCons_head, SCons_tail, Sdrop_repeat,
+      !Moessner_ext_help, Spow_0. ring. }
   rewrite <-(head_tail (D@{_,_} _)), Sdrop_head_S, Sdrop_tail_S.
-  rewrite SCons_head, SCons_tail, Sdrop_repeat, !help.
+  rewrite SCons_head, SCons_tail, Sdrop_repeat, !Moessner_ext_help.
   rewrite <-(Smult_1_r (#(a - d))) at 1.
   rewrite !Ssigmas_plus, !Ssigmas_mult, Moessner, Moessner_alt.
   rewrite !Spow_S. ring.
