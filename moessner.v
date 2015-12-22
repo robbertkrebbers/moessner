@@ -288,7 +288,10 @@ Proof.
 Qed.
 
 Theorem Moessner n : Σ@{1,2,n} #1 ≡ nats ^^ S n.
-Proof. apply (bisimulation_equal _ _ _ bisimulation_Rn). constructor. Qed.
+Proof.
+  eapply bisimulation_equal, Rn_sig1.
+  apply bisimulation_Rn.
+Qed.
 Theorem Moessner_alt n : Σ@{1,2,n} nats ≡ nats ^^ S (S n).
 Proof.
   rewrite <-Moessner, Ssigmas_S_alt.
